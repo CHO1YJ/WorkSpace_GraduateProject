@@ -14,7 +14,13 @@ count_bus_3 = 0 # 3차선 버스 카운트
 count_emergency_1 = 0 # 1차선 구급차 카운트
 count_emergency_2 = 0 # 2차선 구급차 카운트
 count_emergency_3 = 0 # 3차선 구급차 카운트
+# list_count_car = np.array([[count_car_1, count_car_2, count_car_3],  \
+#                            [count_bus_1, count_bus_2, count_bus_3], \
+#                         [count_emergency_1, count_emergency_2, count_emergency_3]])
+
 count_people = 0 # 보행자 카운트
+count_silver = 0 # 노약자 카운트
+count_wheel = 0 # 휠체어 카운트
 
 # 신호등 패턴 조절 함수의 변수 설정 
 # 차량용 보행자용 총 시간은 각각 60초로 기준 설정
@@ -54,15 +60,14 @@ def Control_Traffic_Lights_by_Car(cnt_car1, cnt_car2, cnt_car3, \
         elif cnt_straight < cnt_left:
             t_car_g_strit = time_car_g_stright - t_var_car
             t_car_g_lft = time_car_g_left - t_var_car
-        else: # 긴급 상황
-            if cnt_emgncy_straight > 0:
-                t_car_g_strit = 60
-                time_car_g_left = 60
-            elif cnt_emgncy_left > 0:
-                t_car_g_strit = 60
-                time_car_g_left = 60
-                
-            flag_emergency = False
+    if flag_emergency == True:
+        if cnt_emgncy_straight > 0:
+            t_car_g_strit = 60
+            t_car_g_lft = 60
+        elif cnt_emgncy_left > 0:
+            t_car_g_strit = 60
+            t_car_g_lft = 60   
+        flag_emergency = False
 
     return t_car_g_strit, t_car_g_lft # 차량 신호등 직진 좌회전 시간 제어
 
