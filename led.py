@@ -13,7 +13,7 @@ GPIO.setup(LED_pin_Y, GPIO.OUT)   # LED 핀을 출력으로 설정
 LED_pin_G_S = 4                     # LED 핀은 라즈베리파이 GPIO 2번핀으로
 GPIO.setup(LED_pin_G_S, GPIO.OUT)   # LED 핀을 출력으로 설정
 
-LED_pin_G_L = 45                    # LED 핀은 라즈베리파이 GPIO 2번핀으로
+LED_pin_G_L = 5                    # LED 핀은 라즈베리파이 GPIO 2번핀으로
 GPIO.setup(LED_pin_G_L, GPIO.OUT)   # LED 핀을 출력으로 설정
 
 ###############################################################################
@@ -81,7 +81,7 @@ def Control_Traffic_Lights_by(cnt_car1, cnt_car2, cnt_car3, \
         flag_emergency = True
     # 평시
     if flag_emergency == False:
-        if 16 < t_car_g_stright < 40 or 7 < t_car_g_left < 26:   
+        if 16 <= t_car_g_stright <= 40 or 7 <= t_car_g_left <= 26:   
             if cnt_straight >= cnt_left:
                 t_car_g_stright = time_car_g_stright + t_var_car
                 t_car_g_left = time_car_g_left - t_var_car   
@@ -110,7 +110,7 @@ def Control_Traffic_Lights_by(cnt_car1, cnt_car2, cnt_car3, \
     if flag_silver == False:    
         t_car_r = 28
         t_peo_g = 28
-        if 16 < t_car_g_stright < 40 or 7 < t_car_g_left < 26:   
+        if 16 <= t_car_g_stright <= 40 or 7 <= t_car_g_left <= 26:   
             if cnt_total_peo >= 5:
                 t_car_g_stright = time_car_g_stright - t_var_car
                 t_car_g_left = time_car_g_left - t_var_car   
