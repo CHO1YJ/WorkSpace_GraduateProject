@@ -47,7 +47,7 @@
     GPIO.cleanup()                      # GPIO 핀들을 초기화
 
 ## 1.3 MQTT(MosQuiTTo)
-1. AWS 서버에서 MQTT를 통해 JSON 파일 형식으로 라즈베리파이로 데이터를 받아올 예정이다.
+1. AWS 서버에서 MQTT를 통해 JSON 파일 형식으로 라즈베리파이로 데이터를 받아와 신호 패턴을 최적화한다.
 
 ##### JSON 파일 형식 - "Key" : value
 예시)
