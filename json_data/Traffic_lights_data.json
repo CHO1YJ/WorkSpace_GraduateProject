@@ -1,0 +1,14 @@
+{
+    "Traffic_Light_Cars" : [{
+        "Cars"      : 6,
+        "Bus"       : 1,
+        "Truck"     : 1,
+        "Firetruck" : 0,
+        "Ambulance" : 0
+    }],
+    "Traffic_Light_People" : [{
+        "People"        : 4,
+        "Wheelchair"    : 1,
+        "Silver"        : 0
+    }]
+}
