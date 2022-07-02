@@ -1,14 +1,27 @@
 {
     "Traffic_Light_Cars" : [{
-        "Cars"      : 6,
-        "Bus"       : 1,
-        "Truck"     : 1,
-        "Firetruck" : 0,
-        "Ambulance" : 0
+        "Cars_1"      : 2,
+        "Bus_1"       : 0,
+        "Truck_1"     : 1,
+        "Firetruck_1" : 0,
+        "Ambulance_1" : 0
+    },
+    {
+        "Cars_2"      : 3,
+        "Bus_2"       : 1,
+        "Truck_2"     : 1,
+        "Firetruck_2" : 1,
+        "Ambulance_2" : 0
     }],
+
     "Traffic_Light_People" : [{
         "People"        : 4,
-        "Wheelchair"    : 1,
+        "Wheelchair"    : 0,
         "Silver"        : 0
+    }],
+    
+    "flag_lights_on" : [{
+        "lights_car"    : "True",
+        "lights_people" : "False"
     }]
 }
