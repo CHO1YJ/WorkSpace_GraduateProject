@@ -51,12 +51,12 @@
 변경 후; 시간의 어느 시각을 통제 가능
 
     GPIO.output(LED_pin_Y, GPIO.HIGH)  # 신호(ex; 황색등 On - 신호 변경 준비)
-                # 신호에 따른 차량과 사람의 행동(ex; 차량 대기 & 보행자 대기)
-                pattern_time = result_lights_time['t_car_y']
-                while pattern_time != 0:
-                    print(pattern_time)
-                    pattern_time = pattern_time-1
-                    time.sleep(1)
+    # 신호에 따른 차량과 사람의 행동(ex; 차량 대기 & 보행자 대기)
+    pattern_time = result_lights_time['t_car_y']
+    while pattern_time != 0:
+        print(pattern_time)
+        pattern_time = pattern_time-1
+        time.sleep(1)
 
 #### 하드웨어부 필수 코드 안내
 회로 보호를 위한 코드
