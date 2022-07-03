@@ -1,7 +1,6 @@
 import RPi.GPIO as GPIO  # 라즈베리파이 GPIO 관련 모듈을 불러옴
 import numpy as np
 import time  # 시간관련 모듈을 불러옴
-from datetime import timedelta
 import json
 
 # 라즈베리 GPIO init 설정
@@ -264,7 +263,7 @@ def main():
                     if data_flag == True and pattern_time < 5:
                         pattern_time = 5
                     print(pattern_time)
-                    pattern_time = pattern_time-1
+                    pattern_time = pattern_time - 1
                     time.sleep(1)
             else: # 평시
                 while pattern_time != 0:
@@ -277,29 +276,56 @@ def main():
                     if data_flag == True and pattern_time < 5: # 평시였다가 특수상황의 발생 경우
                         pattern_time = 5
                     print(pattern_time)
-                    pattern_time = pattern_time-1
+                    pattern_time = pattern_time - 1
                     time.sleep(1)
             ###################################################################
-            # 1-1. 황색등 점멸
-            GPIO.output(LED_pin_Y, GPIO.HIGH)  # 황색등 On - 신호 변경 준비
-            # 차량 대기 & 보행자 대기
-            pattern_time = result_lights_time['t_car_y']
-            while pattern_time != 0:
-                print(pattern_time)
-                pattern_time = pattern_time-1
-                time.sleep(1)
-            ###################################################################
-            # 2. 차량의 직진 & 좌회전 & 보행자의 대기
+            # 2. 차량의 직진 & 보행자의 대기
             result_lights_time, result_flag = run_control_traffic_lights(data_lights_car,  # 차량용 신호등 클래스 카운트 데이터
                                                                          data_lights_people,  # 보행자용용 신호등 클래스 카운트 데이터
                                                                          data_lights_time,  # 신호 패턴 시간 데이터
                                                                          data_lights_hyper_parameter,  # 패턴 변동 시간, 차량 가중치 등 하이퍼-파라미터
                                                                          data_specific_flag) # 특수 상황에 대한 신호 데이터
             GPIO.output(LED_pin_R, GPIO.LOW)  # 적색등 Off
-            GPIO.output(LED_pin_Y, GPIO.LOW)  # 황색등 Off
             GPIO.output(LED_pin_G_S, GPIO.HIGH)  # 녹색 직진등 On
+            GPIO.output(LED_pin_G_L, GPIO.LOW)  # 녹색 좌회전등 Off
+            # 차량 직진!
+            pattern_time = result_lights_time['t_car_g_s']
+            if result_flag['flag_car'] == True and result_flag['flag_lights_on_car'] == True: # 특수상황
+                while pattern_time != 0:
+                    result_lights_time, result_flag = run_control_traffic_lights(data_lights_car,  # 차량용 신호등 클래스 카운트 데이터
+                                                                                 data_lights_people,  # 보행자용용 신호등 클래스 카운트 데이터
+                                                                                 data_lights_time,  # 신호 패턴 시간 데이터
+                                                                                 data_lights_hyper_parameter,  # 패턴 변동 시간, 차량 가중치 등 하이퍼-파라미터
+                                                                                 data_specific_flag) # 특수 상황에 대한 신호 데이터
+                    data_flag = result_flag['flag_car']
+                    if data_flag == True and pattern_time < 5:
+                        pattern_time = 5
+                    print(pattern_time)
+                    pattern_time = pattern_time - 1
+                    time.sleep(1)
+            else: # 평시
+                while pattern_time != 0:
+                    result_lights_time, result_flag = run_control_traffic_lights(data_lights_car,  # 차량용 신호등 클래스 카운트 데이터
+                                                                                 data_lights_people,  # 보행자용용 신호등 클래스 카운트 데이터
+                                                                                 data_lights_time,  # 신호 패턴 시간 데이터
+                                                                                 data_lights_hyper_parameter,  # 패턴 변동 시간, 차량 가중치 등 하이퍼-파라미터
+                                                                                 data_specific_flag) # 특수 상황에 대한 신호 데이터
+                    data_flag = result_flag['flag_car']
+                    if data_flag == True and pattern_time < 5: # 평시였다가 특수상황의 발생 경우
+                        pattern_time = 5
+                    print(pattern_time)
+                    pattern_time = pattern_time - 1
+                    time.sleep(1)
+            ###################################################################
+            # 3. 차량의 좌회전 & 보행자의 대기
+            result_lights_time, result_flag = run_control_traffic_lights(data_lights_car,  # 차량용 신호등 클래스 카운트 데이터
+                                                                         data_lights_people,  # 보행자용용 신호등 클래스 카운트 데이터
+                                                                         data_lights_time,  # 신호 패턴 시간 데이터
+                                                                         data_lights_hyper_parameter,  # 패턴 변동 시간, 차량 가중치 등 하이퍼-파라미터
+                                                                         data_specific_flag) # 특수 상황에 대한 신호 데이터
+            GPIO.output(LED_pin_G_S, GPIO.LOW)  # 녹색 직진등 Off
             GPIO.output(LED_pin_G_L, GPIO.HIGH)  # 녹색 좌회전등 On
-            # 차량 직진 + 좌회전!
+            # 차량 좌회전!
             pattern_time = result_lights_time['t_car_g_l']
             if result_flag['flag_car'] == True and result_flag['flag_lights_on_car'] == True: # 특수상황
                 while pattern_time != 0:
@@ -325,44 +351,7 @@ def main():
                     if data_flag == True and pattern_time < 3: # 평시였다가 특수상황의 발생 경우
                         pattern_time = 3
                     print(pattern_time)
-                    pattern_time = pattern_time-1
-                    time.sleep(1)
-            ###################################################################
-            # 3. 차량의 직직 & 보행자의 대기
-            # 신호등 제어 동작 함수 - # 변동 시간 적용
-            result_lights_time, result_flag = run_control_traffic_lights(data_lights_car,  # 차량용 신호등 클래스 카운트 데이터
-                                                                         data_lights_people,  # 보행자용용 신호등 클래스 카운트 데이터
-                                                                         data_lights_time,  # 신호 패턴 시간 데이터
-                                                                         data_lights_hyper_parameter,  # 패턴 변동 시간, 차량 가중치 등 하이퍼-파라미터
-                                                                         data_specific_flag) # 특수 상황에 대한 신호 데이터
-            GPIO.output(LED_pin_G_L, GPIO.LOW)  # 녹색 좌회전등 Off
-            # 차량 직진만!
-            pattern_time = result_lights_time['t_car_g_s'] - result_lights_time['t_car_g_l']
-            if result_flag['flag_car'] == True and result_flag['flag_lights_on_car'] == True: # 특수상황
-                while pattern_time != 0:
-                    result_lights_time, result_flag = run_control_traffic_lights(data_lights_car,  # 차량용 신호등 클래스 카운트 데이터
-                                                                                 data_lights_people,  # 보행자용용 신호등 클래스 카운트 데이터
-                                                                                 data_lights_time,  # 신호 패턴 시간 데이터
-                                                                                 data_lights_hyper_parameter,  # 패턴 변동 시간, 차량 가중치 등 하이퍼-파라미터
-                                                                                 data_specific_flag) # 특수 상황에 대한 신호 데이터
-                    data_flag = result_flag['flag_car']
-                    if data_flag == True and pattern_time < 5:
-                        pattern_time = 5
-                    print(pattern_time)
-                    pattern_time = pattern_time-1
-                    time.sleep(1)
-            else: # 평시
-                while pattern_time != 0:
-                    result_lights_time, result_flag = run_control_traffic_lights(data_lights_car,  # 차량용 신호등 클래스 카운트 데이터
-                                                                                 data_lights_people,  # 보행자용용 신호등 클래스 카운트 데이터
-                                                                                 data_lights_time,  # 신호 패턴 시간 데이터
-                                                                                 data_lights_hyper_parameter,  # 패턴 변동 시간, 차량 가중치 등 하이퍼-파라미터
-                                                                                 data_specific_flag) # 특수 상황에 대한 신호 데이터
-                    data_flag = result_flag['flag_car']
-                    if data_flag == True and pattern_time < 5: # 평시였다가 특수상황의 발생 경우
-                        pattern_time = 5
-                    print(pattern_time)
-                    pattern_time = pattern_time-1
+                    pattern_time = pattern_time - 1
                     time.sleep(1)
             ###################################################################
             # 3-1. 황색등 점멸
