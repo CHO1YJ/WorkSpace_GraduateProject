@@ -30,47 +30,16 @@ def init_data():
 
     # 4차선 삼거리 도로라고 가정!
 
-    # 서버를 통해 전달받은 차량용 신호등에서 차량의 카운트 값
-    count_car_1 = json_data["Traffic_Light_Cars"][0]["Cars_1"]  # 1차선 차량 카운트; 좌회전 차량
-    count_car_2 = json_data["Traffic_Light_Cars"][1]["Cars_2"]  # 2차선 차량 카운트; 직진 차량
-    count_bus_1 = json_data["Traffic_Light_Cars"][0]["Bus_1"] + \
-                  json_data["Traffic_Light_Cars"][0]["Truck_1"]  # 1차선 버스 및 트럭 카운트
-    count_bus_2 = json_data["Traffic_Light_Cars"][1]["Bus_2"] + \
-                  json_data["Traffic_Light_Cars"][1]["Truck_2"]  # 2차선 버스 및 트럭 카운트
-    count_emergency_1 = json_data["Traffic_Light_Cars"][0]["Firetruck_1"] + \
-                        json_data["Traffic_Light_Cars"][0]["Ambulance_1"]  # 1차선 구급차 및 소방차 카운트
-    count_emergency_2 = json_data["Traffic_Light_Cars"][1]["Firetruck_2"] + \
-                        json_data["Traffic_Light_Cars"][1]["Ambulance_2"]  # 2차선 구급차 및 소방차 카운트
-    weight_bus = 2  # 크기로 볼 때, 일반 차량의 2배로 생각
-    data_traffic_lights_car = {
-        'count_car_1': count_car_1,
-        'count_car_2': count_car_2,
-        'count_bus_1': weight_bus * count_bus_1,
-        'count_bus_2': weight_bus * count_bus_2,
-        'count_emergency_1': count_emergency_1,
-        'count_emergency_2': count_emergency_2,
-    }
-
-    # 서버를 통해 전달받은 보행자용 신호등에서 사람의 카운트 값
-    count_people = json_data["Traffic_Light_People"][0]["People"]  # 보행자 카운트
-    count_silver = json_data["Traffic_Light_People"][0]["Silver"]  # 노약자 카운트
-    count_wheel = json_data["Traffic_Light_People"][0]["Wheelchair"]  # 휠체어 카운트
-    data_traffic_lights_people = {
-        'count_people': count_people,
-        'count_silver': count_silver,
-        'count_wheel': count_wheel,
-    }
-
     # 신호등 패턴 조절 함수의 변수 설정
-    # 차량용 신호등의 기준 시간 합계는 110초로 설정
+    # 차량용 신호등의 기준 시간 합계는 100초로 설정
     standard_time_car_r = 30  # 차량용 신호등 적색등 점등 기준 시간
     t_car_r = 30  # 차량용 신호등 적색등 점등 변동 시간
     standard_time_car_y = 3  # 차량용 신호등 황색등 점등 기준 시간
     t_car_y = 3  # 차량용 신호등 황색등 점등 변동 시간
     standard_time_car_g_left = 20  # 차량용 신호등 좌회전등 점등 기준 시간
     t_car_g_l = 20  # 차량용 신호등 좌회전등 점등 변동 시간
-    standard_time_car_g_straight = 60  # 차량용 신호등 녹색등 점등 기준 시간
-    t_car_g_s = 60  # 차량용 신호등 좌회전등 점등 변동 시간
+    standard_time_car_g_straight = 50  # 차량용 신호등 녹색등 점등 기준 시간
+    t_car_g_s = 50  # 차량용 신호등 좌회전등 점등 변동 시간
     # 보행자용 신호등의 기준 시간 합계는 30초로 설정
     standard_time_peo_g = 30  # 보행자용 신호등 녹색등 점등 기준 시간
     t_pple_g = 30  # 보행자용 신호등 녹색등 점등 변동 시간
@@ -109,9 +78,48 @@ def init_data():
         'flag_lights_on_ppl' : flag_lights_on_ppl
     }
 
-    return data_traffic_lights_car, data_traffic_lights_people, data_traffic_lights_time, \
-           data_traffic_lights_hyper_parameter, data_specific_flag
+    return data_traffic_lights_time, data_traffic_lights_hyper_parameter, data_specific_flag
 
+def update_data(data_lights_car_ud, data_lights_people_ud, data_lights_flag_ud):
+    # 입력 파일에 대한 코딩이 필요
+    with open('json_data/Traffic_lights_data.json', 'r', encoding="UTF-8") as f:
+        # 1. json 파일을 읽어오는 함수 load를 사용하는 방식
+        json_data = json.load(f)
+    weighted_value = 2
+    update_lights_car = {
+        'cnt_car_1' : json_data["Traffic_Light_Cars"][0]["Cars_1"],
+        'cnt_car_2' : json_data["Traffic_Light_Cars"][1]["Cars_2"],
+        'cnt_bus_1' : weighted_value * (json_data["Traffic_Light_Cars"][0]["Bus_1"] + \
+                                        json_data["Traffic_Light_Cars"][0]["Truck_1"]),
+        'cnt_bus_2' : weighted_value * (json_data["Traffic_Light_Cars"][1]["Bus_2"] + \
+                                        json_data["Traffic_Light_Cars"][1]["Truck_2"]),
+        'cnt_emergency_1' : json_data["Traffic_Light_Cars"][0]["Firetruck_1"] + \
+                            json_data["Traffic_Light_Cars"][0]["Ambulance_1"], 
+        'cnt_emergency_2' : json_data["Traffic_Light_Cars"][1]["Firetruck_2"] + \
+                            json_data["Traffic_Light_Cars"][1]["Ambulance_2"]
+        }
+    update_lights_people = {
+        'cnt_people': json_data["Traffic_Light_People"][0]["People"],
+        'cnt_silver': json_data["Traffic_Light_People"][0]["Silver"],
+        'cnt_wheel': json_data["Traffic_Light_People"][0]["Wheelchair"]
+        }
+    
+    flag_lights_car = json_data["flag_lights_on"][0]["lights_car"]
+    if flag_lights_car == "True":
+        flag_lights_car = True
+    elif flag_lights_car == " False":
+        flag_lights_car = False
+    flag_lights_ppl = json_data["flag_lights_on"][0]["lights_people"]
+    if flag_lights_ppl == "True":
+        flag_lights_ppl = True
+    elif flag_lights_ppl == " False":
+        flag_lights_ppl = False
+    data_lights_flag_ud = {
+        'flag_lights_car' : flag_lights_car,
+        'flag_lights_people' : flag_lights_ppl
+        }
+    
+    return update_lights_car, update_lights_people, data_lights_flag_ud
 
 # 최대 및 최소 시간제한 함수
 def limit_time(data_lights_time_lt):
@@ -137,10 +145,10 @@ def limit_time(data_lights_time_lt):
 
 # 긴급 차량 및 교통약자 확인 함수
 def flag_func(data_lights_car_ff, data_lights_people_ff, data_spec_flag_ff):
-    cnt_emergency_1 = data_lights_car_ff['count_emergency_1']
-    cnt_emergency_2 = data_lights_car_ff['count_emergency_2']
-    cnt_silver = data_lights_people_ff['count_silver']
-    cnt_wheel = data_lights_people_ff['count_wheel']
+    cnt_emergency_1 = data_lights_car_ff['cnt_emergency_1']
+    cnt_emergency_2 = data_lights_car_ff['cnt_emergency_2']
+    cnt_silver = data_lights_people_ff['cnt_silver']
+    cnt_wheel = data_lights_people_ff['cnt_wheel']
     flag_car = data_spec_flag_ff['flag_emergency']
     flag_people = data_spec_flag_ff['flag_silver']
 
@@ -163,6 +171,7 @@ def run_control_traffic_lights(data_lights_car_run,
                                data_lights_people_run,
                                data_lights_time_run,
                                data_lights_hyper_parameter_run,
+                               data_lights_flag_run,
                                data_specific_flag_run
                                ):
     # 직진 및 좌회전 시의 차량 및 구급차, 소방차 대수 계산
@@ -186,8 +195,8 @@ def run_control_traffic_lights(data_lights_car_run,
         flag_func(data_lights_car_run, data_lights_people_run, data_specific_flag_run)
     flag_car_run = data_specific_flag_run['flag_emergency']
     flag_people_run = data_specific_flag_run['flag_silver']
-    flag_lights_on_car_run = data_specific_flag_run['flag_lights_on_car']
-    flag_lights_on_ppl_run = data_specific_flag_run['flag_lights_on_ppl']
+    flag_lights_on_car_run = data_lights_flag_run['flag_lights_car']
+    flag_lights_on_ppl_run = data_lights_flag_run['flag_lights_ppl']
 
     # 차량 및 보행자용 신호등 제어 알고리즘
     # 평시
@@ -208,7 +217,7 @@ def run_control_traffic_lights(data_lights_car_run,
                 t_car_g_l_run = t_car_g_l_run + t_var_car_run  # 좌회전 신호 시간 증가
         # 인도가 차도보다 복잡한 경우 - 사람 수가 차량 수보다 많을 경우
         elif cnt_total_cars < cnt_total_peo:
-            if cnt_total_peo > 3:  # 이 제어를 해야하나 안 해야하나? 테스트를 통해 확인 필요
+            if cnt_total_peo >= 3:  # 이 제어를 해야하나 안 해야하나? 테스트를 통해 확인 필요
                 t_car_g_s_run = t_car_g_s_run - t_var_car_run  # 직진 신호 시간 감소
                 t_car_g_l_run = t_car_g_l_run - t_var_car_run  # 좌회전 신호 시간 감소
 
@@ -231,21 +240,32 @@ def run_control_traffic_lights(data_lights_car_run,
 # 메인함수
 def main():
     # 신호등 데이터 정제
-    data_lights_car, data_lights_people, data_lights_time, \
-    data_lights_hyper_parameter, data_specific_flag = init_data()
+    data_lights_time, data_lights_hyper_parameter, data_specific_flag = init_data() 
     
     num_cycle = 1
-
+    update_data_lights_flag = {
+        'update_car_lights_flag' : data_specific_flag['flag_lights_on_car'],
+        'update_people_lights_flag' : data_specific_flag['flag_lights_on_ppl']
+        }
+    
     try:  # 이 try 안의 구문을 먼저 수행하고
         while True:  # 무한루프 시작: 아두이노의 loop()와 같음
+            
+            # 신호등 데이터 갱신
+            update_data_car, update_data_people, update_data_lights_flag = \
+                update_data(update_data_lights_flag)
+            
             ###################################################################
             # 1. 차량의 정지 & 보행자의 횡단
             # 신호등 제어 동작 함수 - # 변동 시간 적용
-            result_lights_time, result_flag = run_control_traffic_lights(data_lights_car,  # 차량용 신호등 클래스 카운트 데이터
-                                                                         data_lights_people,  # 보행자용용 신호등 클래스 카운트 데이터
+            result_lights_time, result_flag = run_control_traffic_lights(update_data_car,  # 차량용 신호등 클래스 카운트 데이터
+                                                                         update_data_people,  # 보행자용용 신호등 클래스 카운트 데이터
                                                                          data_lights_time,  # 신호 패턴 시간 데이터
                                                                          data_lights_hyper_parameter,  # 패턴 변동 시간, 차량 가중치 등 하이퍼-파라미터
+                                                                         update_data_lights_flag, # 신호등 점등 신호 데이터
                                                                          data_specific_flag) # 특수 상황에 대한 신호 데이터
+            data_lights_time = result_lights_time
+            data_specific_flag = result_flag
             GPIO.output(LED_pin_R, GPIO.HIGH)  # 적색등 On
             GPIO.output(LED_pin_Y, GPIO.LOW)  # 황색등 Off
             GPIO.output(LED_pin_G_S, GPIO.LOW)  # 녹색 직진등 Off
@@ -254,37 +274,58 @@ def main():
             pattern_time = result_lights_time['t_pple_g']
             if result_flag['flag_people'] == True and result_flag['flag_lights_on_ppl'] == True: # 특수상황
                 while pattern_time != 0:
-                    result_lights_time, result_flag = run_control_traffic_lights(data_lights_car,  # 차량용 신호등 클래스 카운트 데이터
-                                                                                 data_lights_people,  # 보행자용용 신호등 클래스 카운트 데이터
+                    # 신호등 데이터 갱신
+                    update_data_car, update_data_people, update_data_lights_flag = \
+                        update_data(update_data_car, update_data_people, update_data_lights_flag)
+                        
+                    result_lights_time, result_flag = run_control_traffic_lights(update_data_car,  # 차량용 신호등 클래스 카운트 데이터
+                                                                                 update_data_people,  # 보행자용용 신호등 클래스 카운트 데이터
                                                                                  data_lights_time,  # 신호 패턴 시간 데이터
                                                                                  data_lights_hyper_parameter,  # 패턴 변동 시간, 차량 가중치 등 하이퍼-파라미터
+                                                                                 update_data_lights_flag, # 신호등 점등 신호 데이터
                                                                                  data_specific_flag) # 특수 상황에 대한 신호 데이터
+                    data_lights_time = result_lights_time
+                    data_specific_flag = result_flag
                     data_flag = result_flag['flag_people']
-                    if data_flag == True and pattern_time < 5:
+                    if data_flag == True and pattern_time <= 5:
                         pattern_time = 5
                     print(pattern_time)
                     pattern_time = pattern_time - 1
                     time.sleep(1)
             else: # 평시
                 while pattern_time != 0:
-                    result_lights_time, result_flag = run_control_traffic_lights(data_lights_car,  # 차량용 신호등 클래스 카운트 데이터
-                                                                                 data_lights_people,  # 보행자용용 신호등 클래스 카운트 데이터
+                    # 신호등 데이터 갱신
+                    update_data_car, update_data_people, update_data_lights_flag = \
+                        update_data(update_data_car, update_data_people, update_data_lights_flag)
+                        
+                    result_lights_time, result_flag = run_control_traffic_lights(update_data_car,  # 차량용 신호등 클래스 카운트 데이터
+                                                                                 update_data_people,  # 보행자용용 신호등 클래스 카운트 데이터
                                                                                  data_lights_time,  # 신호 패턴 시간 데이터
                                                                                  data_lights_hyper_parameter,  # 패턴 변동 시간, 차량 가중치 등 하이퍼-파라미터
+                                                                                 update_data_lights_flag, # 신호등 점등 신호 데이터
                                                                                  data_specific_flag) # 특수 상황에 대한 신호 데이터
+                    data_lights_time = result_lights_time
+                    data_specific_flag = result_flag
                     data_flag = result_flag['flag_people']
-                    if data_flag == True and pattern_time < 5: # 평시였다가 특수상황의 발생 경우
+                    if data_flag == True and pattern_time <= 5: # 평시였다가 특수상황의 발생 경우
                         pattern_time = 5
                     print(pattern_time)
                     pattern_time = pattern_time - 1
                     time.sleep(1)
             ###################################################################
             # 2. 차량의 직진 & 보행자의 대기
-            result_lights_time, result_flag = run_control_traffic_lights(data_lights_car,  # 차량용 신호등 클래스 카운트 데이터
-                                                                         data_lights_people,  # 보행자용용 신호등 클래스 카운트 데이터
+            # 신호등 데이터 갱신
+            update_data_car, update_data_people, update_data_lights_flag = \
+                update_data(update_data_car, update_data_people, update_data_lights_flag)
+                
+            result_lights_time, result_flag = run_control_traffic_lights(update_data_car,  # 차량용 신호등 클래스 카운트 데이터
+                                                                         update_data_people,  # 보행자용용 신호등 클래스 카운트 데이터
                                                                          data_lights_time,  # 신호 패턴 시간 데이터
                                                                          data_lights_hyper_parameter,  # 패턴 변동 시간, 차량 가중치 등 하이퍼-파라미터
+                                                                         update_data_lights_flag, # 신호등 점등 신호 데이터
                                                                          data_specific_flag) # 특수 상황에 대한 신호 데이터
+            data_lights_time = result_lights_time
+            data_specific_flag = result_flag
             GPIO.output(LED_pin_R, GPIO.LOW)  # 적색등 Off
             GPIO.output(LED_pin_G_S, GPIO.HIGH)  # 녹색 직진등 On
             GPIO.output(LED_pin_G_L, GPIO.LOW)  # 녹색 좌회전등 Off
@@ -292,63 +333,98 @@ def main():
             pattern_time = result_lights_time['t_car_g_s']
             if result_flag['flag_car'] == True and result_flag['flag_lights_on_car'] == True: # 특수상황
                 while pattern_time != 0:
-                    result_lights_time, result_flag = run_control_traffic_lights(data_lights_car,  # 차량용 신호등 클래스 카운트 데이터
-                                                                                 data_lights_people,  # 보행자용용 신호등 클래스 카운트 데이터
+                    # 신호등 데이터 갱신
+                    update_data_car, update_data_people, update_data_lights_flag = \
+                        update_data(update_data_car, update_data_people, update_data_lights_flag)
+                        
+                    result_lights_time, result_flag = run_control_traffic_lights(update_data_car,  # 차량용 신호등 클래스 카운트 데이터
+                                                                                 update_data_people,  # 보행자용용 신호등 클래스 카운트 데이터
                                                                                  data_lights_time,  # 신호 패턴 시간 데이터
                                                                                  data_lights_hyper_parameter,  # 패턴 변동 시간, 차량 가중치 등 하이퍼-파라미터
+                                                                                 update_data_lights_flag, # 신호등 점등 신호 데이터
                                                                                  data_specific_flag) # 특수 상황에 대한 신호 데이터
+                    data_lights_time = result_lights_time
+                    data_specific_flag = result_flag
                     data_flag = result_flag['flag_car']
-                    if data_flag == True and pattern_time < 5:
+                    if data_flag == True and pattern_time <= 5:
                         pattern_time = 5
                     print(pattern_time)
                     pattern_time = pattern_time - 1
                     time.sleep(1)
             else: # 평시
                 while pattern_time != 0:
-                    result_lights_time, result_flag = run_control_traffic_lights(data_lights_car,  # 차량용 신호등 클래스 카운트 데이터
-                                                                                 data_lights_people,  # 보행자용용 신호등 클래스 카운트 데이터
+                    # 신호등 데이터 갱신
+                    update_data_car, update_data_people, update_data_lights_flag = \
+                        update_data(update_data_car, update_data_people, update_data_lights_flag)
+                        
+                    result_lights_time, result_flag = run_control_traffic_lights(update_data_car,  # 차량용 신호등 클래스 카운트 데이터
+                                                                                 update_data_people,  # 보행자용용 신호등 클래스 카운트 데이터
                                                                                  data_lights_time,  # 신호 패턴 시간 데이터
                                                                                  data_lights_hyper_parameter,  # 패턴 변동 시간, 차량 가중치 등 하이퍼-파라미터
+                                                                                 update_data_lights_flag, # 신호등 점등 신호 데이터
                                                                                  data_specific_flag) # 특수 상황에 대한 신호 데이터
+                    data_lights_time = result_lights_time
+                    data_specific_flag = result_flag
                     data_flag = result_flag['flag_car']
-                    if data_flag == True and pattern_time < 5: # 평시였다가 특수상황의 발생 경우
+                    if data_flag == True and pattern_time <= 5: # 평시였다가 특수상황의 발생 경우
                         pattern_time = 5
                     print(pattern_time)
                     pattern_time = pattern_time - 1
                     time.sleep(1)
             ###################################################################
             # 3. 차량의 좌회전 & 보행자의 대기
-            result_lights_time, result_flag = run_control_traffic_lights(data_lights_car,  # 차량용 신호등 클래스 카운트 데이터
-                                                                         data_lights_people,  # 보행자용용 신호등 클래스 카운트 데이터
+            # 신호등 데이터 갱신
+            update_data_car, update_data_people, update_data_lights_flag = \
+                update_data(update_data_car, update_data_people, update_data_lights_flag)
+                
+            result_lights_time, result_flag = run_control_traffic_lights(update_data_car,  # 차량용 신호등 클래스 카운트 데이터
+                                                                         update_data_people,  # 보행자용용 신호등 클래스 카운트 데이터
                                                                          data_lights_time,  # 신호 패턴 시간 데이터
                                                                          data_lights_hyper_parameter,  # 패턴 변동 시간, 차량 가중치 등 하이퍼-파라미터
+                                                                         update_data_lights_flag, # 신호등 점등 신호 데이터
                                                                          data_specific_flag) # 특수 상황에 대한 신호 데이터
+            data_lights_time = result_lights_time
+            data_specific_flag = result_flag
             GPIO.output(LED_pin_G_S, GPIO.LOW)  # 녹색 직진등 Off
             GPIO.output(LED_pin_G_L, GPIO.HIGH)  # 녹색 좌회전등 On
             # 차량 좌회전!
             pattern_time = result_lights_time['t_car_g_l']
             if result_flag['flag_car'] == True and result_flag['flag_lights_on_car'] == True: # 특수상황
                 while pattern_time != 0:
-                    result_lights_time, result_flag = run_control_traffic_lights(data_lights_car,  # 차량용 신호등 클래스 카운트 데이터
-                                                                                 data_lights_people,  # 보행자용용 신호등 클래스 카운트 데이터
+                    # 신호등 데이터 갱신
+                    update_data_car, update_data_people, update_data_lights_flag = \
+                        update_data(update_data_car, update_data_people, update_data_lights_flag)
+                        
+                    result_lights_time, result_flag = run_control_traffic_lights(update_data_car,  # 차량용 신호등 클래스 카운트 데이터
+                                                                                 update_data_people,  # 보행자용용 신호등 클래스 카운트 데이터
                                                                                  data_lights_time,  # 신호 패턴 시간 데이터
                                                                                  data_lights_hyper_parameter,  # 패턴 변동 시간, 차량 가중치 등 하이퍼-파라미터
+                                                                                 update_data_lights_flag, # 신호등 점등 신호 데이터
                                                                                  data_specific_flag) # 특수 상황에 대한 신호 데이터
+                    data_lights_time = result_lights_time
+                    data_specific_flag = result_flag
                     data_flag = result_flag['flag_car']
-                    if data_flag == True and pattern_time < 3:
+                    if data_flag == True and pattern_time <= 3:
                         pattern_time = 3
                     print(pattern_time)
                     pattern_time = pattern_time-1
                     time.sleep(1)
             else: # 평시
                 while pattern_time != 0:
-                    result_lights_time, result_flag = run_control_traffic_lights(data_lights_car,  # 차량용 신호등 클래스 카운트 데이터
-                                                                                 data_lights_people,  # 보행자용용 신호등 클래스 카운트 데이터
+                    # 신호등 데이터 갱신
+                    update_data_car, update_data_people, update_data_lights_flag = \
+                        update_data(update_data_car, update_data_people, update_data_lights_flag)
+                        
+                    result_lights_time, result_flag = run_control_traffic_lights(update_data_car,  # 차량용 신호등 클래스 카운트 데이터
+                                                                                 update_data_people,  # 보행자용용 신호등 클래스 카운트 데이터
                                                                                  data_lights_time,  # 신호 패턴 시간 데이터
                                                                                  data_lights_hyper_parameter,  # 패턴 변동 시간, 차량 가중치 등 하이퍼-파라미터
+                                                                                 update_data_lights_flag, # 신호등 점등 신호 데이터
                                                                                  data_specific_flag) # 특수 상황에 대한 신호 데이터
+                    data_lights_time = result_lights_time
+                    data_specific_flag = result_flag
                     data_flag = result_flag['flag_car']
-                    if data_flag == True and pattern_time < 3: # 평시였다가 특수상황의 발생 경우
+                    if data_flag == True and pattern_time <= 3: # 평시였다가 특수상황의 발생 경우
                         pattern_time = 3
                     print(pattern_time)
                     pattern_time = pattern_time - 1
