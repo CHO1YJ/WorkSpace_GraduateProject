@@ -7,16 +7,16 @@ import json
 GPIO.setmode(GPIO.BCM)  # GPIO 핀들의 번호를 지정하는 규칙 설정
 
 # 이부분은 아두이노 코딩의 setup()에 해당합니다
-LED_pin_R = 2  # LED 핀은 라즈베리파이 GPIO 2번핀으로
+LED_pin_R = 23  # LED 핀은 라즈베리파이 GPIO 2번핀으로
 GPIO.setup(LED_pin_R, GPIO.OUT)  # LED 핀을 출력으로 설정
 
-LED_pin_Y = 3  # LED 핀은 라즈베리파이 GPIO 2번핀으로
+LED_pin_Y = 24  # LED 핀은 라즈베리파이 GPIO 3번핀으로
 GPIO.setup(LED_pin_Y, GPIO.OUT)  # LED 핀을 출력으로 설정
 
-LED_pin_G_S = 4  # LED 핀은 라즈베리파이 GPIO 2번핀으로
+LED_pin_G_S = 27  # LED 핀은 라즈베리파이 GPIO 4번핀으로
 GPIO.setup(LED_pin_G_S, GPIO.OUT)  # LED 핀을 출력으로 설정
 
-LED_pin_G_L = 5  # LED 핀은 라즈베리파이 GPIO 2번핀으로
+LED_pin_G_L = 22  # LED 핀은 라즈베리파이 GPIO 5번핀으로
 GPIO.setup(LED_pin_G_L, GPIO.OUT)  # LED 핀을 출력으로 설정
 
 
@@ -80,7 +80,7 @@ def init_data():
 
     return data_traffic_lights_time, data_traffic_lights_hyper_parameter, data_specific_flag
 
-def update_data(data_lights_car_ud, data_lights_people_ud, data_lights_flag_ud):
+def update_data(data_lights_flag_ud):
     # 입력 파일에 대한 코딩이 필요
     with open('json_data/Traffic_lights_data.json', 'r', encoding="UTF-8") as f:
         # 1. json 파일을 읽어오는 함수 load를 사용하는 방식
@@ -196,7 +196,7 @@ def run_control_traffic_lights(data_lights_car_run,
     flag_car_run = data_specific_flag_run['flag_emergency']
     flag_people_run = data_specific_flag_run['flag_silver']
     flag_lights_on_car_run = data_lights_flag_run['flag_lights_car']
-    flag_lights_on_ppl_run = data_lights_flag_run['flag_lights_ppl']
+    flag_lights_on_ppl_run = data_lights_flag_run['flag_lights_people']
 
     # 차량 및 보행자용 신호등 제어 알고리즘
     # 평시
@@ -210,10 +210,10 @@ def run_control_traffic_lights(data_lights_car_run,
         t_pple_g_run = data_lights_limit_time[4] # 보행자용 - 녹색
 
         # 차도가 인도보다 복잡한 경우 - 차량 수가 사람 수보다 많을 경우
-        if cnt_total_cars >= cnt_total_peo:
-            if cnt_straight >= cnt_left:  # 직진 차량이 좌회전 차량보다 많을 경우
+        if cnt_total_cars > cnt_total_peo:
+            if cnt_straight > cnt_left:  # 직진 차량이 좌회전 차량보다 많을 경우
                 t_car_g_s_run = t_car_g_s_run + t_var_car_run  # 직진 신호 시간 증가
-            elif cnt_straight <= cnt_left:  # 좌회전 차량이 직진 차량보다 많을 경우
+            elif cnt_straight < cnt_left:  # 좌회전 차량이 직진 차량보다 많을 경우
                 t_car_g_l_run = t_car_g_l_run + t_var_car_run  # 좌회전 신호 시간 증가
         # 인도가 차도보다 복잡한 경우 - 사람 수가 차량 수보다 많을 경우
         elif cnt_total_cars < cnt_total_peo:
@@ -276,7 +276,7 @@ def main():
                 while pattern_time != 0:
                     # 신호등 데이터 갱신
                     update_data_car, update_data_people, update_data_lights_flag = \
-                        update_data(update_data_car, update_data_people, update_data_lights_flag)
+                        update_data(update_data_lights_flag)
                         
                     result_lights_time, result_flag = run_control_traffic_lights(update_data_car,  # 차량용 신호등 클래스 카운트 데이터
                                                                                  update_data_people,  # 보행자용용 신호등 클래스 카운트 데이터
@@ -296,7 +296,7 @@ def main():
                 while pattern_time != 0:
                     # 신호등 데이터 갱신
                     update_data_car, update_data_people, update_data_lights_flag = \
-                        update_data(update_data_car, update_data_people, update_data_lights_flag)
+                        update_data(update_data_lights_flag)
                         
                     result_lights_time, result_flag = run_control_traffic_lights(update_data_car,  # 차량용 신호등 클래스 카운트 데이터
                                                                                  update_data_people,  # 보행자용용 신호등 클래스 카운트 데이터
@@ -316,7 +316,7 @@ def main():
             # 2. 차량의 직진 & 보행자의 대기
             # 신호등 데이터 갱신
             update_data_car, update_data_people, update_data_lights_flag = \
-                update_data(update_data_car, update_data_people, update_data_lights_flag)
+                update_data(update_data_lights_flag)
                 
             result_lights_time, result_flag = run_control_traffic_lights(update_data_car,  # 차량용 신호등 클래스 카운트 데이터
                                                                          update_data_people,  # 보행자용용 신호등 클래스 카운트 데이터
@@ -335,7 +335,7 @@ def main():
                 while pattern_time != 0:
                     # 신호등 데이터 갱신
                     update_data_car, update_data_people, update_data_lights_flag = \
-                        update_data(update_data_car, update_data_people, update_data_lights_flag)
+                        update_data(update_data_lights_flag)
                         
                     result_lights_time, result_flag = run_control_traffic_lights(update_data_car,  # 차량용 신호등 클래스 카운트 데이터
                                                                                  update_data_people,  # 보행자용용 신호등 클래스 카운트 데이터
@@ -355,7 +355,7 @@ def main():
                 while pattern_time != 0:
                     # 신호등 데이터 갱신
                     update_data_car, update_data_people, update_data_lights_flag = \
-                        update_data(update_data_car, update_data_people, update_data_lights_flag)
+                        update_data(update_data_lights_flag)
                         
                     result_lights_time, result_flag = run_control_traffic_lights(update_data_car,  # 차량용 신호등 클래스 카운트 데이터
                                                                                  update_data_people,  # 보행자용용 신호등 클래스 카운트 데이터
@@ -375,7 +375,7 @@ def main():
             # 3. 차량의 좌회전 & 보행자의 대기
             # 신호등 데이터 갱신
             update_data_car, update_data_people, update_data_lights_flag = \
-                update_data(update_data_car, update_data_people, update_data_lights_flag)
+                update_data(update_data_lights_flag)
                 
             result_lights_time, result_flag = run_control_traffic_lights(update_data_car,  # 차량용 신호등 클래스 카운트 데이터
                                                                          update_data_people,  # 보행자용용 신호등 클래스 카운트 데이터
@@ -393,7 +393,7 @@ def main():
                 while pattern_time != 0:
                     # 신호등 데이터 갱신
                     update_data_car, update_data_people, update_data_lights_flag = \
-                        update_data(update_data_car, update_data_people, update_data_lights_flag)
+                        update_data(update_data_lights_flag)
                         
                     result_lights_time, result_flag = run_control_traffic_lights(update_data_car,  # 차량용 신호등 클래스 카운트 데이터
                                                                                  update_data_people,  # 보행자용용 신호등 클래스 카운트 데이터
@@ -413,7 +413,7 @@ def main():
                 while pattern_time != 0:
                     # 신호등 데이터 갱신
                     update_data_car, update_data_people, update_data_lights_flag = \
-                        update_data(update_data_car, update_data_people, update_data_lights_flag)
+                        update_data(update_data_lights_flag)
                         
                     result_lights_time, result_flag = run_control_traffic_lights(update_data_car,  # 차량용 신호등 클래스 카운트 데이터
                                                                                  update_data_people,  # 보행자용용 신호등 클래스 카운트 데이터
@@ -453,7 +453,6 @@ def main():
     # 이부분은 반드시 추가해주셔야 합니다.
     finally:  # try 구문이 종료되면
         GPIO.cleanup()  # GPIO 핀들을 초기화
-
 
 # 파일 실행 시점
 if __name__ == "__main__":
