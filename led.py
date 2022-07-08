@@ -1,24 +1,7 @@
-import RPi.GPIO as GPIO  # 라즈베리파이 GPIO 관련 모듈을 불러옴
+import _rpi_ws281x as ws
 import numpy as np
 import time  # 시간관련 모듈을 불러옴
 import json
-
-# 라즈베리 GPIO init 설정
-GPIO.setmode(GPIO.BCM)  # GPIO 핀들의 번호를 지정하는 규칙 설정
-
-# 이부분은 아두이노 코딩의 setup()에 해당합니다
-LED_pin_R = 23  # LED 핀은 라즈베리파이 GPIO 2번핀으로
-GPIO.setup(LED_pin_R, GPIO.OUT)  # LED 핀을 출력으로 설정
-
-LED_pin_Y = 24  # LED 핀은 라즈베리파이 GPIO 3번핀으로
-GPIO.setup(LED_pin_Y, GPIO.OUT)  # LED 핀을 출력으로 설정
-
-LED_pin_G_S = 27  # LED 핀은 라즈베리파이 GPIO 4번핀으로
-GPIO.setup(LED_pin_G_S, GPIO.OUT)  # LED 핀을 출력으로 설정
-
-LED_pin_G_L = 22  # LED 핀은 라즈베리파이 GPIO 5번핀으로
-GPIO.setup(LED_pin_G_L, GPIO.OUT)  # LED 핀을 출력으로 설정
-
 
 ################################################################################
 
@@ -174,6 +157,13 @@ def run_control_traffic_lights(data_lights_car_run,
                                data_lights_flag_run,
                                data_specific_flag_run
                                ):
+    # 기준 시간 재정의
+    standard_time_car_r = 30  # 차량용 신호등 적색등 점등 기준 시간
+    standard_time_car_y = 3  # 차량용 신호등 황색등 점등 기준 시간
+    standard_time_car_g_left = 20  # 차량용 신호등 좌회전등 점등 기준 시간
+    standard_time_car_g_straight = 50  # 차량용 신호등 녹색등 점등 기준 시간
+    standard_time_peo_g = 30  # 보행자용 신호등 녹색등 점등 기준 시간
+    
     # 직진 및 좌회전 시의 차량 및 구급차, 소방차 대수 계산
     cnt_left = sum(data_lights_car_run.values())  # 1차선; 좌회전도 직진도 가능한 차선의 차량 수
     cnt_straight = sum(data_lights_car_run.values())  # 2차선; 직진만 가능한 차선의 차량 수
@@ -220,17 +210,17 @@ def run_control_traffic_lights(data_lights_car_run,
             if cnt_total_peo >= 3:  # 이 제어를 해야하나 안 해야하나? 테스트를 통해 확인 필요
                 t_car_g_s_run = t_car_g_s_run - t_var_car_run  # 직진 신호 시간 감소
                 t_car_g_l_run = t_car_g_l_run - t_var_car_run  # 좌회전 신호 시간 감소
-
-    result_lights_time_run = {
-        't_car_r' : t_car_r_run, 
-        't_car_y' : t_car_y_run, 
-        't_car_g_l' : t_car_g_l_run, 
-        't_car_g_s' : t_car_g_s_run, 
-        't_pple_g' : t_pple_g_run
+    
+    result_lights_time_run = {     
+        'standard_time_car_r': standard_time_car_r, 't_car_r': t_car_r_run,
+        'standard_time_car_y': standard_time_car_y, 't_car_y': t_car_y_run,
+        'standard_time_car_g_left': standard_time_car_g_left, 't_car_g_l': t_car_g_l_run,
+        'standard_time_car_g_straight': standard_time_car_g_straight, 't_car_g_s': t_car_g_s_run,
+        'standard_time_peo_g': standard_time_peo_g, 't_pple_g': t_pple_g_run
     }
     result_flag_run = {
-        'flag_car' : flag_car_run, 
-        'flag_people' : flag_people_run, 
+        'flag_emergency' : flag_car_run, 
+        'flag_silver' : flag_people_run, 
         'flag_lights_on_car' : flag_lights_on_car_run, 
         'flag_lights_on_ppl' : flag_lights_on_ppl_run
     }
@@ -239,9 +229,56 @@ def run_control_traffic_lights(data_lights_car_run,
 
 # 메인함수
 def main():
+    # LED configuration.
+    LED_CHANNEL = 0
+    LED_COUNT = 33              # How many LEDs to light.
+    LED_CNT_R = 9               # How many LEDs to red signal light.
+    LED_CNT_G = 9               # How many LEDs to green signal light.
+    LED_CNT_Y = 9               # How many LEDs to yellow signal light.
+    LED_CNT_LEFT = 6            # How many LEDs to left signal light.
+    # LED_CNT_CLEAR = 0           # clear LED
+    LED_FREQ_HZ = 800000        # Frequency of the LED signal.  Should be 800khz or 400khz.
+    LED_DMA_NUM = 10            # DMA channel to use, can be 0-14.
+    LED_GPIO = 18               # GPIO connected to the LED signal line.  Must support PWM!
+    LED_BRIGHTNESS = 255        # Set to 0 for darkest and 255 for brightest
+    LED_INVERT = 0              # Set to 1 to invert the LED signal, good if using NPN
+
+    DOT_COLORS = [0x008800,   # red
+                  0x888800,   # yellow
+                  0x880000,	  # green
+                  0x000000,   # clear
+                  0x200000]	  # test-green
+
+
+    # Create a ws2811_t structure from the LED configuration.
+    leds = ws.new_ws2811_t()
+
+    # Initialize all channels to off
+    for channum in range(2):
+        channel = ws.ws2811_channel_get(leds, channum)
+        ws.ws2811_channel_t_count_set(channel, 0)
+        ws.ws2811_channel_t_gpionum_set(channel, 0)
+        ws.ws2811_channel_t_invert_set(channel, 0)
+        ws.ws2811_channel_t_brightness_set(channel, 0)
+
+    channel = ws.ws2811_channel_get(leds, LED_CHANNEL)
+
+    ws.ws2811_channel_t_count_set(channel, LED_COUNT)
+    ws.ws2811_channel_t_gpionum_set(channel, LED_GPIO)
+    ws.ws2811_channel_t_invert_set(channel, LED_INVERT)
+    ws.ws2811_channel_t_brightness_set(channel, LED_BRIGHTNESS)
+
+    ws.ws2811_t_freq_set(leds, LED_FREQ_HZ)
+    ws.ws2811_t_dmanum_set(leds, LED_DMA_NUM)
+
+    # Initialize library with LED configuration.
+    resp = ws.ws2811_init(leds)
+    if resp != ws.WS2811_SUCCESS:
+        message = ws.ws2811_get_return_t_str(resp)
+        raise RuntimeError('ws2811_init failed with code {0} ({1})'.format(resp, message))
+    
     # 신호등 데이터 정제
     data_lights_time, data_lights_hyper_parameter, data_specific_flag = init_data() 
-    
     num_cycle = 1
     update_data_lights_flag = {
         'update_car_lights_flag' : data_specific_flag['flag_lights_on_car'],
@@ -249,6 +286,7 @@ def main():
         }
     
     try:  # 이 try 안의 구문을 먼저 수행하고
+        LED_mode = 0 # 0 Clear / 1 Red / 2 Yellow / 3 Green left / 4 Green straight
         while True:  # 무한루프 시작: 아두이노의 loop()와 같음
             
             # 신호등 데이터 갱신
@@ -266,13 +304,30 @@ def main():
                                                                          data_specific_flag) # 특수 상황에 대한 신호 데이터
             data_lights_time = result_lights_time
             data_specific_flag = result_flag
-            GPIO.output(LED_pin_R, GPIO.HIGH)  # 적색등 On
-            GPIO.output(LED_pin_Y, GPIO.LOW)  # 황색등 Off
-            GPIO.output(LED_pin_G_S, GPIO.LOW)  # 녹색 직진등 Off
-            GPIO.output(LED_pin_G_L, GPIO.LOW)  # 녹색 좌회전등 Off
+            
+            # 모든 LED reset(clear)
+            num_led = 0 # 해당값부터 LED_COUNT까지 점등
+            for i in range(LED_COUNT):
+                color = DOT_COLORS[3]
+                # Set the LED color buffer value.
+                ws.ws2811_led_set(channel, num_led + i, color)  
+            # Send the LED color data to the hardware.
+            resp = ws.ws2811_render(leds)
+            # LED red
+            LED_mode = 1
+            if LED_mode == 1:
+                num_led = 0 # 해당값부터 LED_COUNT까지 점등
+                for i in range(LED_CNT_R):
+                    color = DOT_COLORS[3]
+                    color = DOT_COLORS[0]   
+                    # Set the LED color buffer value.
+                    ws.ws2811_led_set(channel, num_led + i, color)
+                # Send the LED color data to the hardware.
+                resp = ws.ws2811_render(leds)
+            
             # 차량 정지 & 보행자 횡단
             pattern_time = result_lights_time['t_pple_g']
-            if result_flag['flag_people'] == True and result_flag['flag_lights_on_ppl'] == True: # 특수상황
+            if result_flag['flag_silver'] == True and result_flag['flag_lights_on_ppl'] == True: # 특수상황
                 while pattern_time != 0:
                     # 신호등 데이터 갱신
                     update_data_car, update_data_people, update_data_lights_flag = \
@@ -286,7 +341,7 @@ def main():
                                                                                  data_specific_flag) # 특수 상황에 대한 신호 데이터
                     data_lights_time = result_lights_time
                     data_specific_flag = result_flag
-                    data_flag = result_flag['flag_people']
+                    data_flag = result_flag['flag_silver']
                     if data_flag == True and pattern_time <= 5:
                         pattern_time = 5
                     print(pattern_time)
@@ -297,7 +352,6 @@ def main():
                     # 신호등 데이터 갱신
                     update_data_car, update_data_people, update_data_lights_flag = \
                         update_data(update_data_lights_flag)
-                        
                     result_lights_time, result_flag = run_control_traffic_lights(update_data_car,  # 차량용 신호등 클래스 카운트 데이터
                                                                                  update_data_people,  # 보행자용용 신호등 클래스 카운트 데이터
                                                                                  data_lights_time,  # 신호 패턴 시간 데이터
@@ -306,7 +360,7 @@ def main():
                                                                                  data_specific_flag) # 특수 상황에 대한 신호 데이터
                     data_lights_time = result_lights_time
                     data_specific_flag = result_flag
-                    data_flag = result_flag['flag_people']
+                    data_flag = result_flag['flag_silver']
                     if data_flag == True and pattern_time <= 5: # 평시였다가 특수상황의 발생 경우
                         pattern_time = 5
                     print(pattern_time)
@@ -326,12 +380,30 @@ def main():
                                                                          data_specific_flag) # 특수 상황에 대한 신호 데이터
             data_lights_time = result_lights_time
             data_specific_flag = result_flag
-            GPIO.output(LED_pin_R, GPIO.LOW)  # 적색등 Off
-            GPIO.output(LED_pin_G_S, GPIO.HIGH)  # 녹색 직진등 On
-            GPIO.output(LED_pin_G_L, GPIO.LOW)  # 녹색 좌회전등 Off
+            
+            # 모든 LED reset(clear)
+            num_led = 0 # 해당값부터 LED_COUNT까지 점등
+            for i in range(LED_COUNT):
+                color = DOT_COLORS[3]
+                # Set the LED color buffer value.
+                ws.ws2811_led_set(channel, num_led + i, color)  
+            # Send the LED color data to the hardware.
+            resp = ws.ws2811_render(leds)
+            # LED green straight
+            LED_mode = 4
+            if LED_mode == 4:
+                num_led = LED_CNT_R + LED_CNT_Y + LED_CNT_LEFT # 해당값부터 LED_COUNT까지 점등
+                for i in range(LED_CNT_G):
+                    color = DOT_COLORS[3]
+                    color = DOT_COLORS[2]
+                    # Set the LED color buffer value.
+                    ws.ws2811_led_set(channel, num_led + i, color)
+                # Send the LED color data to the hardware.
+                resp = ws.ws2811_render(leds)
+                
             # 차량 직진!
             pattern_time = result_lights_time['t_car_g_s']
-            if result_flag['flag_car'] == True and result_flag['flag_lights_on_car'] == True: # 특수상황
+            if result_flag['flag_emergency'] == True and result_flag['flag_lights_on_car'] == True: # 특수상황
                 while pattern_time != 0:
                     # 신호등 데이터 갱신
                     update_data_car, update_data_people, update_data_lights_flag = \
@@ -345,7 +417,7 @@ def main():
                                                                                  data_specific_flag) # 특수 상황에 대한 신호 데이터
                     data_lights_time = result_lights_time
                     data_specific_flag = result_flag
-                    data_flag = result_flag['flag_car']
+                    data_flag = result_flag['flag_emergency']
                     if data_flag == True and pattern_time <= 5:
                         pattern_time = 5
                     print(pattern_time)
@@ -365,12 +437,41 @@ def main():
                                                                                  data_specific_flag) # 특수 상황에 대한 신호 데이터
                     data_lights_time = result_lights_time
                     data_specific_flag = result_flag
-                    data_flag = result_flag['flag_car']
+                    data_flag = result_flag['flag_emergency']
                     if data_flag == True and pattern_time <= 5: # 평시였다가 특수상황의 발생 경우
                         pattern_time = 5
                     print(pattern_time)
                     pattern_time = pattern_time - 1
                     time.sleep(1)
+                    
+            ###################################################################
+            # 2-1. 황색등 점멸
+            # 모든 LED reset(clear)
+            num_led = 0 # 해당값부터 LED_COUNT까지 점등
+            for i in range(LED_COUNT):
+                color = DOT_COLORS[3]
+                # Set the LED color buffer value.
+                ws.ws2811_led_set(channel, num_led + i, color)  
+            # Send the LED color data to the hardware.
+            resp = ws.ws2811_render(leds)
+            # LED yello
+            LED_mode = 2
+            if LED_mode == 2:
+                num_led = LED_CNT_R # 해당값부터 LED_COUNT까지 점등
+                for i in range(LED_CNT_Y):
+                    color = DOT_COLORS[3]
+                    color = DOT_COLORS[1]
+                    # Set the LED color buffer value.
+                    ws.ws2811_led_set(channel, num_led + i, color)
+                # Send the LED color data to the hardware.
+                resp = ws.ws2811_render(leds)
+
+            # 차량 대기 & 보행자 대기
+            pattern_time = result_lights_time['t_car_y']
+            while pattern_time != 0:
+                print(pattern_time)
+                pattern_time = pattern_time-1
+                time.sleep(1)
             ###################################################################
             # 3. 차량의 좌회전 & 보행자의 대기
             # 신호등 데이터 갱신
@@ -385,11 +486,30 @@ def main():
                                                                          data_specific_flag) # 특수 상황에 대한 신호 데이터
             data_lights_time = result_lights_time
             data_specific_flag = result_flag
-            GPIO.output(LED_pin_G_S, GPIO.LOW)  # 녹색 직진등 Off
-            GPIO.output(LED_pin_G_L, GPIO.HIGH)  # 녹색 좌회전등 On
+            
+            # 모든 LED reset(clear)
+            num_led = 0 # 해당값부터 LED_COUNT까지 점등
+            for i in range(LED_COUNT):
+                color = DOT_COLORS[3]
+                # Set the LED color buffer value.
+                ws.ws2811_led_set(channel, num_led + i, color)  
+            # Send the LED color data to the hardware.
+            resp = ws.ws2811_render(leds)
+            # LED green left
+            LED_mode = 3
+            if LED_mode == 3:
+                num_led = LED_CNT_R + LED_CNT_Y # 해당값부터 LED_COUNT까지 점등
+                for i in range(LED_CNT_LEFT):
+                    color = DOT_COLORS[3]
+                    color = DOT_COLORS[2]
+                    # Set the LED color buffer value.
+                    ws.ws2811_led_set(channel, num_led + i, color)
+                # Send the LED color data to the hardware.
+                resp = ws.ws2811_render(leds)
+                
             # 차량 좌회전!
             pattern_time = result_lights_time['t_car_g_l']
-            if result_flag['flag_car'] == True and result_flag['flag_lights_on_car'] == True: # 특수상황
+            if result_flag['flag_emergency'] == True and result_flag['flag_lights_on_car'] == True: # 특수상황
                 while pattern_time != 0:
                     # 신호등 데이터 갱신
                     update_data_car, update_data_people, update_data_lights_flag = \
@@ -403,7 +523,7 @@ def main():
                                                                                  data_specific_flag) # 특수 상황에 대한 신호 데이터
                     data_lights_time = result_lights_time
                     data_specific_flag = result_flag
-                    data_flag = result_flag['flag_car']
+                    data_flag = result_flag['flag_emergency']
                     if data_flag == True and pattern_time <= 3:
                         pattern_time = 3
                     print(pattern_time)
@@ -423,7 +543,7 @@ def main():
                                                                                  data_specific_flag) # 특수 상황에 대한 신호 데이터
                     data_lights_time = result_lights_time
                     data_specific_flag = result_flag
-                    data_flag = result_flag['flag_car']
+                    data_flag = result_flag['flag_emergency']
                     if data_flag == True and pattern_time <= 3: # 평시였다가 특수상황의 발생 경우
                         pattern_time = 3
                     print(pattern_time)
@@ -431,7 +551,35 @@ def main():
                     time.sleep(1)
             ###################################################################
             # 3-1. 황색등 점멸
-            GPIO.output(LED_pin_Y, GPIO.HIGH)  # 황색등 On - 신호 변경 준비
+            # 모든 LED reset(clear)
+            num_led = 0 # 해당값부터 LED_COUNT까지 점등
+            for i in range(LED_COUNT):
+                color = DOT_COLORS[3]
+                # Set the LED color buffer value.
+                ws.ws2811_led_set(channel, num_led + i, color)  
+            # Send the LED color data to the hardware.
+            resp = ws.ws2811_render(leds)
+            # LED yello & green left
+            LED_mode = 2
+            if LED_mode == 2:
+                # LED yellow
+                num_led = LED_CNT_R # 해당값부터 LED_COUNT까지 점등
+                for i in range(LED_CNT_Y):
+                    color = DOT_COLORS[3]
+                    color = DOT_COLORS[1]
+                    # Set the LED color buffer value.
+                    ws.ws2811_led_set(channel, num_led + i, color)
+                    # LED green left
+                num_led = LED_CNT_R + LED_CNT_Y # 해당값부터 LED_COUNT까지 점등
+                for i in range(LED_CNT_LEFT):
+                    color = DOT_COLORS[3]
+                    color = DOT_COLORS[2]
+                    # Set the LED color buffer value.
+                    ws.ws2811_led_set(channel, num_led + i, color)
+                    
+                # Send the LED color data to the hardware.
+                resp = ws.ws2811_render(leds)
+            
             # 차량 대기 & 보행자 대기
             pattern_time = result_lights_time['t_car_y']
             while pattern_time != 0:
@@ -452,7 +600,9 @@ def main():
             
     # 이부분은 반드시 추가해주셔야 합니다.
     finally:  # try 구문이 종료되면
-        GPIO.cleanup()  # GPIO 핀들을 초기화
+        pass
+        ws.ws2811_fini(leds)
+        ws.delete_ws2811_t(leds)
 
 # 파일 실행 시점
 if __name__ == "__main__":
